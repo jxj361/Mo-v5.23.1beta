@@ -1,0 +1,146 @@
+/* ========== theme.css — 主题/取色/配色/背景 ========== */
+
+:root {
+    --theme: #c5a47e;
+    --theme-light: rgba(197, 164, 126, 0.15);
+    --theme-dark: #9b7a5c;
+    --bubble-sent: var(--theme);
+    --bubble-sent-text: #fff;
+    --bubble-recv: rgba(197, 164, 126, 0.12);
+    --bubble-recv-border: rgba(197, 164, 126, 0.25);
+}
+
+/* 五子棋/围棋按钮强制跟随主题色 */
+.gomoku-btn {
+    padding: 6px 12px !important;
+    border: 1px solid var(--theme) !important;
+    background: var(--theme-light) !important;
+    color: var(--theme-dark) !important;
+    border-radius: 20px !important;
+    cursor: pointer !important;
+    font-size: 13px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 4px !important;
+}
+.gomoku-btn svg {
+    stroke: var(--theme-dark) !important;
+    color: var(--theme-dark) !important;
+}
+.gomoku-btn:active {
+    background: var(--theme) !important;
+    color: #fff !important;
+}
+.gomoku-btn:active svg {
+    stroke: #fff !important;
+    color: #fff !important;
+}
+
+/* 导航栏页面背景遮罩层 */
+.page-bg-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(255, 255, 255, 0.4);
+    pointer-events: none;
+    z-index: 0;
+}
+
+/* 取色弹窗 */
+.color-picker-preset {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    padding: 8px 0;
+}
+.color-preset-dot {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    cursor: pointer;
+    border: 2px solid transparent;
+    transition: border 0.2s;
+}
+.color-preset-dot.active {
+    border-color: #333;
+}
+
+/* 取色预览区 */
+.color-preview {
+    width: 60px;
+    height: 60px;
+    border-radius: 12px;
+    border: 1px solid var(--border-light);
+    margin: 8px auto;
+}
+
+/* 已保存颜色列表 */
+.saved-colors-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+.saved-color-item {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    cursor: pointer;
+    border: 1px solid rgba(0,0,0,0.1);
+    transition: transform 0.15s;
+}
+.saved-color-item:active {
+    transform: scale(1.2);
+}
+
+/* 配色方案色卡 */
+.color-scheme-card {
+    display: flex;
+    gap: 4px;
+    padding: 8px;
+    border-radius: 12px;
+    border: 2px solid transparent;
+    cursor: pointer;
+    transition: border 0.2s;
+}
+.color-scheme-card.active {
+    border-color: var(--theme);
+}
+.color-scheme-swatch {
+    width: 40px;
+    height: 40px;
+    border-radius: 8px;
+}
+
+/* 取色器按钮 */
+.color-picker-btn {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    border: 2px dashed var(--border-light);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: none;
+    color: var(--text-secondary);
+    font-size: 20px;
+}
+
+/* 图片取色画布区 */
+.color-image-canvas {
+    max-width: 100%;
+    max-height: 200px;
+    border-radius: 8px;
+    cursor: crosshair;
+    display: block;
+    margin: 8px auto;
+}
+
+/* 色号输入框 */
+.color-hex-input {
+    width: 120px;
+    padding: 6px 10px;
+    border-radius: 8px;
+    border: 1px solid var(--border-light);
+    font-size: 14px;
+    text-align: center;
+}
