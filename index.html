@@ -1,0 +1,625 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>默 v5.23.beta</title>
+    <link rel="manifest" href="data:application/manifest+json,%7B%22name%22%3A%22%E4%BC%A0%E8%AE%AF%20%C2%B7%20jxj%20v5.13%22%2C%22short_name%22%3A%22jxj%22%2C%22start_url%22%3A%22.%2F%22%2C%22display%22%3A%22standalone%22%2C%22background_color%22%3A%22%23f5f3f0%22%2C%22theme_color%22%3A%22%23c5a47e%22%2C%22icons%22%3A%5B%7B%22src%22%3A%22data%3Aimage%2Fsvg%2Bxml%3Bbase64%2CPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTAwIj48cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgZmlsbD0iI2M1YTQ3ZSIvPjx0ZXh0IHg9IjUwIiB5PSI2NSIgZm9udC1zaXplPSI1MCIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZmlsbD0id2hpdGUiPkogPC90ZXh0Pjwvc3ZnPg%3D%3D%22%2C%22sizes%22%3A%22100x100%22%2C%22type%22%3A%22image%2Fsvg%2Bxml%22%7D%5D%7D" />
+    <link rel="stylesheet" href="css/theme.css">
+    <style>
+        :root {
+          --primary-bg: #f5f3f0;
+          --secondary-bg: #ffffff;
+          --text-primary: #1f2e3a;
+          --text-secondary: #6c7a89;
+          --border-light: #e9eef3;
+          --text-shadow: 0 0 4px rgba(255, 255, 255, 0.95);
+          --theme: #c5a47e;
+          --theme-light: #f0e6d8;
+          --theme-dark: #9b7a5c;
+          --bubble-sent: var(--theme-light);
+          --bubble-recv: #ffffff;
+          --bubble-recv-border: var(--theme);
+        }
+        * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+        body { height:100dvh; width:100vw; overflow:hidden; background:var(--primary-bg); font-family:system-ui, -apple-system, sans-serif; }
+        .page { display:none; height:100%; flex-direction:column; background:var(--primary-bg); position:absolute; inset:0; }
+        .page.active { display:flex; }
+        .bottom-nav { height:54px; background:var(--secondary-bg); border-top:1px solid var(--border-light); display:flex; align-items:center; justify-content:space-around; flex-shrink:0; padding-bottom:env(safe-area-inset-bottom); position:relative; z-index:100; }
+        .nav-item { display:flex; flex-direction:column; align-items:center; font-size:10px; color:var(--text-secondary); gap:3px; cursor:pointer; padding:6px 10px; border-radius:10px; transition: all 0.2s; }
+        .nav-item i { font-size:20px; font-style:normal; color:var(--text-secondary); }
+        .nav-item svg { color:var(--text-secondary); }
+        .nav-item.active { background:var(--theme-light) !important; color:var(--theme-dark) !important; font-weight:bold; }
+        .nav-item.active i, .nav-item.active svg { color:var(--theme-dark) !important; }
+        .chat-list { flex:1; overflow-y:auto; background:var(--secondary-bg); }
+        .chat-item { display:flex; align-items:center; padding:12px 16px; gap:12px; cursor:pointer; position:relative; overflow:hidden; }
+        .chat-item .reply-badge { position:absolute; right:12px; top:50%; transform:translateY(-50%); font-size:14px; color:var(--theme); display:none; }
+        .chat-item .reply-badge.show { display:block; }
+        .avatar { width:52px; height:52px; border-radius:8px; background:#e4dfd7; display:flex; align-items:center; justify-content:center; font-size:24px; overflow:hidden; flex-shrink:0; }
+        .avatar img { width:100%; height:100%; object-fit:cover; }
+        .info { flex:1; min-width:0; }
+        .name { font-size:15px; font-weight:500; margin-bottom:4px; text-shadow: var(--text-shadow); }
+        .preview { font-size:13px; color:var(--text-secondary); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+        .chat-header { height:54px; display:flex; align-items:center; padding:0 12px; gap:8px; border-bottom:1px solid var(--border-light); flex-shrink:0; background:var(--secondary-bg); }
+        .back-btn { font-size:24px; cursor:pointer; color:var(--theme); width:36px; display:flex; align-items:center; justify-content:center; text-shadow: var(--text-shadow); }
+        .chat-title { flex:1; font-size:17px; font-weight:500; text-align:center; text-shadow: var(--text-shadow); }
+        .chat-menu { font-size:22px; width:36px; text-align:center; cursor:pointer; color:var(--theme); }
+        .chat-body { flex:1; overflow-y:auto; padding:12px 8px; background-size:cover; background-position:center; position:relative; }
+        .msg-row { display:flex; margin-bottom:12px; align-items:flex-start; }
+        .msg-self { justify-content:flex-end; }
+        .msg-other { justify-content:flex-start; }
+        .msg-other .msg-avatar { margin-right:6px; }
+        .msg-self .msg-avatar { margin-left:6px; order:1; }
+        .msg-avatar { width:36px; height:36px; border-radius:8px; overflow:hidden; flex-shrink:0; cursor:pointer; }
+        .msg-avatar img { width:100%; height:100%; object-fit:cover; }
+        .msg-content { max-width:70%; }
+        .msg-bubble { padding:8px 12px; border-radius:16px; font-size:14px; line-height:1.4; word-break:break-word; text-align:left; position:relative; width:fit-content; max-width:100%; }
+        .msg-other .msg-bubble { background:var(--bubble-recv); border-top-left-radius:2px; }
+        .msg-self .msg-bubble { background:var(--bubble-sent); border-top-right-radius:2px; }
+        .msg-image-only { max-width:120px; max-height:120px; width:auto; height:auto; object-fit:contain; border-radius:4px; display:block; }
+        .msg-time { font-size:10px; color:var(--text-secondary); margin-top:2px; }
+        .msg-other .msg-time { text-align:left; }
+        .msg-self .msg-time { text-align:right; }
+        .sender-name { font-size:11px; color:var(--text-secondary); margin-bottom:2px; margin-left:4px; text-shadow: var(--text-shadow); }
+        .system-msg { text-align:center; font-size:12px; color:var(--text-secondary); margin:12px 0; }
+        .system-msg.music-share { cursor:pointer; color:var(--theme); text-decoration:underline; }
+        .share-msg { text-align:center; font-size:12px; color:var(--theme); margin:12px 0; }
+        .date-separator { text-align:center; font-size:12px; color:var(--text-secondary); margin:16px 0; }
+        .date-separator span { background:rgba(0,0,0,0.05); padding:2px 12px; border-radius:10px; }
+        .msg-image-inline { max-width:100px; max-height:100px; border-radius:4px; margin:4px 2px; display:inline-block; object-fit:contain; vertical-align:middle; }
+        .initiative-tag { font-size:10px; color:var(--theme); margin-bottom:2px; }
+        .quote-preview {
+          font-size: 12px;
+          color: var(--text-secondary);
+          background: rgba(255, 255, 255, 0.85);
+          backdrop-filter: blur(4px);
+          padding: 4px 8px;
+          border-radius: 8px;
+          margin-bottom: 4px;
+          border-left: 3px solid var(--theme);
+          border: 1px solid var(--bubble-recv-border);
+          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          cursor: pointer;
+        }
+        .quote-preview .quote-remove { cursor:pointer; color:#f44336; font-weight:bold; margin-left:8px; }
+        .input-area { border-top:1px solid var(--border-light); padding:6px 10px 8px; }
+        .tools-row { display:flex; align-items:center; margin-bottom:6px; }
+        .tools-bar { display:flex; gap:0; flex:1; justify-content:space-between; padding:0 5%; transition: all 0.3s; overflow:hidden; }
+        .tools-bar.collapsed { max-height:0; opacity:0; pointer-events:none; margin:0; }
+        .tools-row.collapsed { max-height:0; opacity:0; pointer-events:none; margin:0; padding:0; }
+        .tool-icon { font-size:22px; border:none; cursor:pointer; color:var(--theme); width:36px; border-radius:8px; background: none; }
+        .tool-toggle { background:none; border:none; font-size:18px; cursor:pointer; color:var(--theme); flex-shrink:0; margin-right:4px; pointer-events:auto; }
+        .tools-bar-second { display:flex; gap:0; flex:1; justify-content:space-between; padding:0 20%; transition: all 0.3s; overflow:hidden; }
+        .tools-bar-second.collapsed { max-height:0; opacity:0; pointer-events:none; margin:0; }
+        .input-row { display:flex; gap:6px; align-items:flex-end; }
+        .rich-input { flex:1; min-height:34px; max-height:70px; overflow-y:auto; border-radius:18px; border:1px solid var(--border-light); padding:7px 12px; font-size:14px; outline:none; word-break:break-word; }
+        .rich-input img { width:22px; height:22px; vertical-align:middle; margin:0 2px; }
+        .send-btn { background:var(--theme); border:none; color:white; padding:0 16px; height:34px; border-radius:18px; font-weight:500; cursor:pointer; align-self:center; }
+        .voice-btn { background:none; border:none; font-size:24px; cursor:pointer; color:var(--theme); }
+        .voice-record { flex:1; display:flex; align-items:center; justify-content:center; }
+        .voice-record-btn { background:var(--theme); color:white; padding:8px 24px; border-radius:20px; border:none; font-size:14px; cursor:pointer; user-select:none; transition: background 0.2s; }
+        .voice-record-btn.recording { background:#a08060; }
+        @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.3; } }
+        .recording-dot { display:inline-block; width:12px; height:12px; border-radius:50%; background:#c5a47e; animation:pulse 0.8s infinite; margin-right:6px; vertical-align:middle; }
+        .voice-playing { background: var(--theme) !important; opacity: 0.3; }
+        .emoji-panel, .image-panel { display:none; flex-wrap:wrap; gap:6px; padding:8px; border-top:1px solid var(--border-light); max-height:160px; overflow-y:auto; justify-content:flex-start; align-content:flex-start; position:relative; }
+        .emoji-panel { background:rgba(245,235,220,0.85); border:2px solid #a0522d; }
+        .image-panel { background:rgba(235,225,210,0.85); border:1px solid #c5a47e; }
+        .emoji-panel.show, .image-panel.show { display:flex; }
+        .emoji-panel.active-panel { border:2px solid var(--theme); }
+        .image-panel.active-panel { border:1px solid var(--theme); }
+        .emoji-item { width:75px; height:75px; display:flex; align-items:center; justify-content:center; font-size:32px; background:var(--primary-bg); border-radius:10px; cursor:pointer; position:relative; }
+        .emoji-item img { width:100%; height:100%; object-fit:contain; border-radius:8px; }
+        .emoji-item .emoji-delete { position:absolute; top:-5px; right:-5px; width:15px; height:15px; background:red; color:white; border-radius:50%; font-size:9px; display:none; align-items:center; justify-content:center; cursor:pointer; }
+        .emoji-item.user-emoji .emoji-delete, .emoji-item.image-item .emoji-delete { display:flex; }
+        .resize-handle { width:100%; height:8px; background:rgba(0,0,0,0.1); border-radius:0 0 4px 4px; cursor:ns-resize; margin-top:4px; }
+        .card-item.disabled, .card-item.disabled span { opacity:0.5; text-decoration:line-through; }
+        .status-tag { font-size:12px; background:var(--theme); color:white; padding:1px 8px; border-radius:10px; margin-left:6px; }
+        .reply-indicator { font-size:12px; color:var(--theme); margin-left:4px; display:none; cursor:pointer; }
+        .reply-indicator.show { display:inline; }
+        .reply-dot { display:inline-block; width:10px; height:10px; border-radius:50%; background:#c5a47e; margin-left:4px; cursor:pointer; vertical-align:middle; }
+        .reply-float { position:fixed; right:8px; top:50%; transform:translateY(-50%); z-index:100; font-size:18px; cursor:pointer; display:none; }
+        .reply-float.show { display:block; }
+        .mask { position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:1000; display:none; align-items:center; justify-content:center; }
+        .mask.show { display:flex; }
+        .pop-card { width:90%; max-width:400px; background:var(--secondary-bg); border-radius:24px; overflow:hidden; max-height:85vh; display:flex; flex-direction:column; box-shadow:0 20px 40px rgba(0,0,0,0.2); }
+        .pop-header { padding:16px 20px; border-bottom:1px solid var(--border-light); font-weight:600; font-size:18px; display:flex; justify-content:space-between; align-items:center; }
+        .pop-body { flex:1; overflow-y:auto; padding:16px; display:flex; flex-direction:column; gap:10px; }
+        .pop-footer { padding:12px 16px; border-top:1px solid var(--border-light); display:flex; gap:8px; justify-content:center; }
+        .close-pop { font-size:24px; cursor:pointer; color:var(--theme); }
+        .btn { padding:8px 14px; border-radius:20px; border:none; font-size:13px; cursor:pointer; background:#eef2f5; color:var(--text-primary); }
+        .btn-primary { background:var(--theme); color:white; }
+        .btn.active { background:var(--theme); color:white; }
+        .btn-highlight { background:var(--theme); color:white; }
+        .view-tabs { display:flex; gap:6px; flex-wrap:wrap; }
+        .view-tab { padding:6px 14px; background:var(--primary-bg); border-radius:14px; font-size:13px; cursor:pointer; color:var(--text-secondary); }
+        .view-tab.active { background:var(--theme); color:#fff; }
+        .search-row { display:flex; align-items:center; gap:8px; }
+        .search-row input { flex:1; padding:6px 10px; border-radius:15px; border:1px solid var(--border-light); background:var(--primary-bg); font-size:13px; }
+        .card-scroll-area { flex:1; overflow-y:scroll; min-height:60px; max-height:45vh; display:flex; flex-wrap:wrap; gap:6px; align-content:flex-start; padding:4px 0; }
+        .batch-del-btn { margin-top:6px; background:#f44336; color:#fff; border:none; padding:8px 16px; border-radius:20px; cursor:pointer; font-size:13px; width:100%; }
+        .call-mini { position:fixed; bottom:80px; right:16px; background:var(--theme); color:#fff; padding:8px 16px; border-radius:20px; cursor:pointer; z-index:1100; display:none; font-size:13px; align-items:center; gap:8px; user-select:none; touch-action:none; }
+        .call-mini .call-mini-end { background:none; border:none; color:#f44336; font-size:20px; cursor:pointer; }
+        .music-float-ball, .call-float-ball, .backup-float-ball { position:fixed; z-index:1150; width:55px; height:55px; border-radius:50%; background:var(--theme); color:white; display:none; align-items:center; justify-content:center; font-size:26px; cursor:pointer; box-shadow:0 2px 8px rgba(0,0,0,0.3); user-select:none; touch-action:none; }
+        .backup-float-panel { position:fixed; z-index:1160; background:var(--secondary-bg); border-radius:16px; box-shadow:0 4px 16px rgba(0,0,0,0.3); display:none; flex-direction:column; padding:8px; gap:6px; user-select:none; touch-action:none; }
+        .music-float-list { position:fixed; z-index:1150; width:170px; max-height:300px; background:var(--secondary-bg); border-radius:16px; box-shadow:0 4px 16px rgba(0,0,0,0.3); display:none; flex-direction:column; overflow:hidden; user-select:none; touch-action:none; }
+        .music-float-list .float-list-header { padding:6px 10px; font-size:12px; font-weight:bold; background:var(--theme); color:white; display:flex; justify-content:space-between; align-items:center; }
+        .music-float-list .float-list-body { flex:1; overflow-y:auto; padding:4px; }
+        .music-float-list .float-list-item { padding:6px 8px; font-size:11px; cursor:pointer; border-radius:8px; display:flex; justify-content:space-between; align-items:center; }
+        .music-float-list .float-list-item.playing { color:var(--theme); font-weight:bold; }
+        .music-float-bar { position:fixed; z-index:1150; height:50px; background:var(--secondary-bg); border-radius:25px; box-shadow:0 4px 16px rgba(0,0,0,0.3); display:none; align-items:center; padding:0 12px; gap:8px; user-select:none; touch-action:none; }
+        .music-float-bar .bar-info { flex:1; font-size:12px; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; cursor:pointer; }
+        .music-float-bar button { background:none; border:none; font-size:18px; cursor:pointer; color:var(--theme); }
+        .music-checkbox { width:16px; height:16px; cursor:pointer; }
+        .highlight-flash { animation: highlightFlash 2s; }
+        @keyframes highlightFlash { 0%,100% { background:transparent; } 50% { background:var(--theme); color:white; } }
+        .toast { position:fixed; top:20px; left:50%; transform:translateX(-50%); background:rgba(0,0,0,0.85); color:white; padding:8px 20px; border-radius:20px; font-size:13px; z-index:9999; pointer-events:none; opacity:0; transition:opacity 0.3s; }
+        .toast.show { opacity:1; pointer-events:auto; }
+        .compact-input { width:55px; padding:4px 6px; border-radius:8px; border:1px solid var(--border-light); font-size:12px; text-align:center; }
+        .moment-img { width:80px; height:80px; object-fit:cover; border-radius:4px; margin:2px; }
+        .moment-actions { display:flex; gap:16px; margin-top:4px; font-size:12px; color:var(--text-secondary); }
+        .moment-actions span { cursor:pointer; }
+        .moment-delete { position:absolute; top:8px; right:12px; cursor:pointer; color:#f44336; font-size:16px; }
+        .context-menu { position:fixed; background:white; border-radius:12px; box-shadow:0 4px 12px rgba(0,0,0,0.15); z-index:2000; min-width:120px; padding:4px; display:none; }
+        .context-menu-item { padding:10px 16px; font-size:14px; cursor:pointer; border-radius:8px; }
+        .context-menu-item:hover { background:var(--primary-bg); }
+        .letter-star { color:gold; margin-left:4px; }
+        .countdown { font-size:11px; color:var(--theme); margin-left:8px; }
+        .letter-collapse { display:block; max-height:60px; overflow:hidden; }
+        .letter-expand { cursor:pointer; color:var(--theme); font-size:12px; }
+        .toggle-switch { display:flex; align-items:center; gap:6px; }
+        .toggle-switch span { font-size:13px; }
+        .blocked-keyword-tag { display:inline-flex; align-items:center; background:var(--primary-bg); border-radius:12px; padding:2px 8px; margin:2px; gap:4px; }
+        .blocked-keyword-tag span { font-size:12px; }
+        .blocked-keyword-tag .remove-kw { cursor:pointer; color:#f44336; font-weight:bold; }
+        .draft-checkbox { margin-right:8px; }
+        .call-status-text { font-size:13px; color:var(--theme); margin-top:4px; }
+        .bg-thumb { position:relative; display:inline-block; margin:4px; cursor:pointer; }
+        .bg-thumb img { width:80px; height:80px; object-fit:cover; border-radius:8px; border:2px solid transparent; }
+        .bg-thumb.selected img { border-color: var(--theme); box-shadow: 0 0 0 2px var(--theme); }
+        .bg-thumb.moments-selected img { border-color: var(--theme); box-shadow: 0 0 0 2px var(--theme); }
+        .bg-thumb .bg-label { position:absolute; bottom:4px; left:50%; transform:translateX(-50%); background:var(--theme); color:white; font-size:9px; padding:1px 6px; border-radius:6px; white-space:nowrap; }
+        .bg-thumb .bg-delete { position:absolute; top:-6px; right:-6px; background:red; color:white; border-radius:50%; width:18px; height:18px; display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:12px; }
+        .chat-item .swipe-bg { position:absolute; right:0; top:0; height:100%; display:flex; align-items:center; background:#f44336; color:white; padding:0 16px; border-radius:0 8px 8px 0; transform:translateX(100%); transition:transform 0.2s; }
+        .chat-item.swiped .swipe-bg { transform:translateX(0); }
+        .card-search-row { display:flex; align-items:flex-start; gap:8px; }
+        .card-search-row input { flex:1; padding:6px 10px; border-radius:15px; border:1px solid var(--border-light); background:var(--primary-bg); font-size:13px; max-width:60%; }
+        .card-search-row .vertical-checks { display:flex; flex-direction:column; gap:2px; font-size:12px; }
+        .card-nav-btns { display:flex; gap:4px; justify-content:space-between; }
+        .card-nav-btns button { flex:1; }
+        .contact-detail { flex:1; overflow-y:auto; padding:12px; display:flex; flex-direction:column; gap:8px; }
+        .contact-detail .avatar { width:70px; height:70px; margin:0 auto; border-radius:10px; }
+        .full-page-header { height:54px; background:var(--secondary-bg); display:flex; align-items:center; padding:0 12px; gap:8px; border-bottom:1px solid var(--border-light); flex-shrink:0; }
+        .full-page-body { flex:1; overflow-y:auto; padding:12px; display:flex; flex-direction:column; gap:10px; }
+        .inline-input-row { display:flex; gap:6px; align-items:center; margin:4px 0; }
+        .inline-input-row input { width:50px; padding:4px; border-radius:8px; border:1px solid var(--border-light); text-align:center; }
+        .section-title { font-weight:bold; padding:10px 12px 4px; color:var(--text-secondary); font-size:13px; }
+        .date-calendar { width:100%; max-width:350px; margin:0 auto; }
+        .date-calendar .cal-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; }
+        .date-calendar .cal-header button { background:none; border:none; font-size:20px; cursor:pointer; color:var(--theme); padding:4px 10px; }
+        .date-calendar .cal-month { font-weight:bold; font-size:16px; }
+        .date-calendar .cal-table { width:100%; border-collapse:collapse; }
+        .date-calendar .cal-table th { text-align:center; font-size:11px; color:var(--text-secondary); padding:4px 0; font-weight:normal; }
+        .date-calendar .cal-table td { text-align:center; padding:6px 0; font-size:13px; border-radius:8px; cursor:pointer; }
+        .date-calendar .cal-table td.has-chat { background:var(--theme); color:white; font-weight:bold; border-radius:8px; }
+        .date-calendar .cal-table td.no-chat { color:#ccc; }
+        .date-calendar .cal-table td.other-month { color:#ddd; }
+        .date-calendar .cal-table td.today { border:1px solid var(--theme); border-radius:8px; }
+        .image-search-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:4px; }
+        .image-search-grid .img-thumb { aspect-ratio:1; overflow:hidden; border-radius:6px; cursor:pointer; position:relative; }
+        .image-search-grid .img-thumb img { width:100%; height:100%; object-fit:cover; }
+        .image-search-grid .img-thumb .img-sender { position:absolute; bottom:2px; left:2px; font-size:9px; background:rgba(0,0,0,0.5); color:white; padding:1px 4px; border-radius:4px; }
+        .voice-search-list, .music-search-list { display:flex; flex-direction:column; gap:4px; }
+        .voice-search-item, .music-search-item { padding:10px; border-bottom:1px solid var(--border-light); cursor:pointer; display:flex; align-items:center; gap:8px; }
+        .voice-search-item .voice-icon, .music-search-item .music-icon { font-size:24px; }
+        .voice-search-item .voice-info, .music-search-item .music-info { flex:1; }
+        .voice-search-item .voice-duration, .music-search-item .music-duration { font-size:12px; color:var(--text-secondary); }
+        .voice-note { font-size:11px; color:var(--text-secondary); margin-top:4px; font-style:italic; }
+        .voice-note-btn { font-size:10px; color:var(--theme); cursor:pointer; margin-left:4px; }
+        .music-player { display:flex; flex-direction:column; gap:8px; }
+        .music-player .music-list { flex:1; overflow-y:auto; }
+        .music-player .music-item { padding:10px; border-bottom:1px solid var(--border-light); display:flex; justify-content:space-between; align-items:center; }
+        .music-player .music-item.playing { color:var(--theme); font-weight:bold; }
+        .music-player .music-item .song-index { width:30px; text-align:center; font-size:12px; color:var(--text-secondary); }
+        .music-player .music-item .song-info { flex:1; }
+        .music-player .music-item .song-actions { display:flex; gap:4px; }
+        .music-player .music-controls { display:flex; align-items:center; justify-content:center; gap:16px; padding:8px 0; }
+        .music-player .music-controls button { background:none; border:none; font-size:24px; cursor:pointer; color:var(--theme); }
+        .music-player .music-info { text-align:center; font-size:13px; }
+        .music-volume-row { display:flex; align-items:center; gap:8px; padding:0 12px; }
+        .music-volume-row input { flex:1; }
+        .book-float-ball, .movie-float-ball { position:fixed; z-index:1150; width:55px; height:55px; border-radius:50%; background:var(--theme); color:white; display:none; align-items:center; justify-content:center; font-size:26px; cursor:pointer; box-shadow:0 2px 8px rgba(0,0,0,0.3); user-select:none; touch-action:none; }
+        .book-float-list, .movie-float-list { position:fixed; z-index:1150; width:170px; max-height:300px; background:var(--secondary-bg); border-radius:16px; box-shadow:0 4px 16px rgba(0,0,0,0.3); display:none; flex-direction:column; overflow:hidden; user-select:none; touch-action:none; }
+        .book-float-list .float-list-header, .movie-float-list .float-list-header { padding:6px 10px; font-size:12px; font-weight:bold; background:var(--theme); color:white; display:flex; justify-content:space-between; align-items:center; }
+        .book-float-list .float-list-body, .movie-float-list .float-list-body { flex:1; overflow-y:auto; padding:4px; }
+        .companion-page { display:none; height:100%; flex-direction:column; background:var(--primary-bg); position:absolute; inset:0; }
+        .companion-page.active { display:flex; }
+        .companion-timer { font-size:48px; font-weight:bold; text-align:center; margin:20px 0; color:var(--theme); }
+        .companion-info { text-align:center; font-size:16px; margin-bottom:16px; }
+        .companion-interactions { flex:1; overflow-y:auto; padding:0 12px; background:var(--secondary-bg); border-radius:12px; margin:0 8px; }
+        .companion-controls { display:flex; justify-content:center; gap:12px; padding:16px; }
+        .companion-active-overlay { position:absolute; inset:0; background:rgba(0,0,0,0.15); pointer-events:none; z-index:1; }
+        .companion-active-inner { position:relative; z-index:2; display:flex; flex-direction:column; align-items:center; justify-content:center; height:100%; gap:16px; }
+        .companion-active-timer { font-size:56px; font-weight:bold; color:white; text-shadow:0 2px 12px rgba(0,0,0,0.4); }
+        .companion-active-name { font-size:18px; color:rgba(255,255,255,0.9); text-shadow:0 1px 6px rgba(0,0,0,0.3); }
+        .companion-active-info { font-size:14px; color:rgba(255,255,255,0.75); }
+        .companion-active-controls { display:flex; gap:12px; margin-top:8px; }
+        .companion-active-controls button { padding:10px 20px; border-radius:20px; border:none; font-size:14px; cursor:pointer; background:rgba(255,255,255,0.2); color:white; backdrop-filter:blur(4px); }
+        .companion-active-controls .btn-end { background:rgba(244,67,54,0.7); }
+        .companion-bg-select { margin-top:8px; }
+        .companion-bg-select button { padding:6px 14px; border-radius:14px; border:none; font-size:12px; cursor:pointer; background:rgba(255,255,255,0.15); color:white; }
+        .book-list-item, .movie-list-item { display:flex; align-items:center; padding:10px; border-bottom:1px solid var(--border-light); }
+        .book-list-item .item-index, .movie-list-item .item-index { width:30px; text-align:center; }
+        .book-list-item .item-info, .movie-list-item .item-info { flex:1; }
+        .book-list-item .item-actions, .movie-list-item .item-actions { display:flex; gap:4px; }
+        .tarot-card { display:inline-block; width:80px; height:120px; background:var(--secondary-bg); border:2px solid var(--theme); border-radius:8px; margin:4px; text-align:center; font-size:11px; padding:4px; overflow:hidden; cursor:pointer; }
+        .tarot-card.reversed { transform: rotate(180deg); }
+        .chat-body-overlay { position:absolute; inset:0; background:rgba(255,255,255,0.3); pointer-events:none; z-index:0; }
+        .discover-scroll { flex:1; overflow-y:auto; background:var(--secondary-bg); }
+        .unread-badge { position:absolute; top:8px; right:8px; background:#f44336; color:white; border-radius:50%; min-width:18px; height:18px; font-size:10px; display:flex; align-items:center; justify-content:center; padding:0 4px; }
+        .group-announcement { padding:10px 16px; background:var(--theme); color:white; font-size:13px; text-align:center; }
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: var(--theme);
+            border: 2px solid #fff;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        input[type="range"]::-webkit-slider-thumb:active {
+            background: var(--theme-dark);
+        }
+        input[type="range"]::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: var(--theme);
+            border: 2px solid #fff;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+            cursor: pointer;
+        }
+        .nav-item svg, .nav-item i svg, .tool-icon svg, .tool-icon i svg, .icon-btn svg, .chat-menu svg, .back-btn svg, .voice-btn svg, .voice-record-btn svg, .btn svg, .btn-primary svg, #globalAddBtn svg, #momentsPublishBtn svg, #discoverListContainer .avatar svg, #musicFloatBall svg, #backupFloatBall svg, .call-float-ball svg, .music-float-bar svg, .voice-search-item svg, .music-search-item svg, .chat-item .avatar svg, .contact-detail .avatar svg, .section-title svg, .card-item svg, .call-mini svg, .call-mini-end svg, .full-page-header svg, .companion-controls svg, .music-float-list svg, .book-float-ball svg, .movie-float-ball svg {
+          color: var(--theme);
+          stroke: var(--theme);
+        }
+        .nav-item.active svg, .nav-item.active i svg, .icon-btn:active svg, .btn-primary svg, .send-btn svg, .music-float-ball svg, .call-float-ball svg, .backup-float-ball svg, .call-mini svg, .call-mini-end svg {
+          color: var(--theme-dark);
+          stroke: var(--theme-dark);
+        }
+        .send-btn svg, .btn-primary svg {
+          color: #fff;
+          stroke: #fff;
+        }
+        #discoverListContainer .avatar svg {
+          color: var(--theme-dark);
+          stroke: var(--theme-dark);
+        }
+        .reset-btn-red svg {
+          color: #f44336 !important;
+          stroke: #f44336 !important;
+        }
+        #mePageContent .btn {
+          color: var(--text-primary);
+        }
+        #mePageContent .btn svg {
+          color: var(--theme);
+          stroke: var(--theme);
+        }
+        #mePageContent .section-title {
+          color: var(--text-primary);
+        }
+        #contactDetailContent .section-title { font-weight: bold !important; }
+        button .btn svg[stroke="#f44336"], button svg[stroke="#f44336"] {
+          stroke: #f44336 !important;
+          color: #f44336 !important;
+        }
+        #contactDetailContent .section-title {
+          color: var(--text-primary) !important;
+        }
+        #backupFloatBall {
+            background: var(--theme-light);
+        }
+        #backupFloatBall svg {
+            color: var(--theme-dark);
+            stroke: var(--theme-dark);
+        }
+        #musicFloatBall {
+            background: var(--theme-light);
+        }
+        #musicFloatBall svg {
+            color: var(--theme-dark);
+            stroke: var(--theme-dark);
+        }
+        .chat-body .msg-row .msg-bubble {
+            backdrop-filter: blur(4px);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        .msg-self .msg-bubble {
+            background: linear-gradient(rgba(255,255,255,0.85), rgba(255,255,255,0.85)), var(--bubble-sent);
+            background-blend-mode: multiply;
+        }
+        .msg-other .msg-bubble {
+            background: linear-gradient(rgba(255,255,255,0.85), rgba(255,255,255,0.85)), var(--bubble-recv);
+            background-blend-mode: multiply;
+            border: 1px solid var(--bubble-recv-border);
+        }
+        #musicFloatBall, #backupFloatBall {
+            background: var(--theme);
+            color: #fff;
+        }
+    </style>
+</head>
+<body>
+<div id="chatsPage" class="page active">
+    <div style="height:54px;background:var(--secondary-bg);display:flex;align-items:center;justify-content:space-between;padding:0 16px;border-bottom:1px solid var(--border-light);">
+        <span style="font-size:20px;font-weight:600;color:var(--theme);">默 v5.23.beta</span>
+      
+        <span id="globalAddBtn" style="cursor:pointer;color:var(--theme);display:flex;align-items:center;"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></span>
+    </div>
+    <div class="chat-list" id="chatListContainer"></div>
+    <div class="bottom-nav">
+        <div class="nav-item active" data-nav="chats"><i><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></i><span>传讯</span></div>
+        <div class="nav-item" data-nav="contacts"><i><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></i><span>通讯录</span></div>
+        <div class="nav-item" data-nav="discover"><i><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/><path d="M2 12h20"/></svg></i><span>发现</span></div>
+        <div class="nav-item" data-nav="me"><i><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></i><span>我</span></div>
+    </div>
+</div>
+<div id="chatPage" class="page">
+    <div class="chat-header" id="chatHeader"><div class="back-btn" id="chatBackBtn">‹</div><div class="chat-title" id="chatTitle">聊天</div><div class="chat-menu" id="chatMenuBtn">···</div></div>
+    <div class="chat-body" id="chatMessages"></div>
+    <div class="reply-float" id="replyFloat">📬</div>
+    <div class="input-area" id="inputArea">
+        <div id="quotePreviewContainer" style="margin-bottom:4px;"></div>
+        <div class="tools-row" id="toolsRow">
+            <div class="tools-bar" id="toolsBar">
+                <button class="tool-icon icon-btn" id="callBtn"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg></button>
+                <button class="tool-icon icon-btn" id="musicTriggerBtn" title="音乐悬浮球"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></button>
+                <button class="tool-icon icon-btn" id="backupTriggerBtn" title="备份"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2h12l4 4v14a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6z"/><rect x="6" y="2" width="12" height="6" rx="1"/><rect x="8" y="12" width="8" height="4" rx="0.5"/></svg></button>
+                <button class="tool-icon icon-btn" id="emojiTriggerBtn"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg></button>
+                <button class="tool-icon icon-btn" id="imageUploadBtn"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></button>
+            </div>
+            <button class="tool-icon icon-btn" id="toggleToolsBtn" title="折叠图标"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="18 15 12 9 6 15"/></svg></button>
+        </div>
+        <div class="tools-row" id="toolsRow2" style="display:none;">
+            <div class="tools-bar-second" id="toolsBar2">
+                <button class="tool-icon icon-btn" id="shareMovieBtn" title="分享电影"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"/><line x1="7" y1="2" x2="7" y2="22"/><line x1="17" y1="2" x2="17" y2="22"/><line x1="2" y1="12" x2="22" y2="12"/><line x1="2" y1="7" x2="7" y2="7"/><line x1="2" y1="17" x2="7" y2="17"/><line x1="17" y1="7" x2="22" y2="7"/><line x1="17" y1="17" x2="22" y2="17"/></svg></button>
+                <button class="tool-icon icon-btn" id="shareBookBtn" title="分享书单"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg></button>
+                <button class="tool-icon icon-btn" id="shareMusicBtn" title="分享音乐"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></button>
+            </div>
+        </div>
+        <button class="tool-icon icon-btn" id="toggleToolsRowBtn" title="折叠/展开整行" style="display:block; margin-bottom:4px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg></button>
+        <div class="input-row">
+            <button class="voice-btn icon-btn" id="voiceBtn" title="切换语音">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M6 8h.01M10 8h.01M14 8h.01M18 8h.01M8 12h.01M12 12h.01M16 12h.01M6 16h12"/></svg>
+            </button>
+            <div id="messageInput" class="rich-input" contenteditable="true" placeholder="输入消息..."></div>
+            <div id="voiceRecordArea" style="display:none; flex:1; justify-content:center;">
+                <button class="voice-record-btn" id="voiceRecordBtn">点按说话</button>
+            </div>
+            <button class="send-btn" id="sendMsgBtn">发送</button>
+        </div>
+        <div id="emojiPanel" class="emoji-panel"></div><div id="imagePanel" class="image-panel"></div>
+    </div>
+</div>
+<div id="contactsPage" class="page">
+    <div style="height:54px;background:var(--secondary-bg);display:flex;align-items:center;padding:0 12px;border-bottom:1px solid var(--border-light);">
+        <span style="font-weight:600;font-size:18px;color:var(--theme);">通讯录</span>
+    </div>
+    <div style="flex:1;overflow-y:auto;background:var(--secondary-bg);" id="contactListContainer"></div>
+    <div class="bottom-nav">
+        <div class="nav-item" data-nav="chats"><i><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></i><span>传讯</span></div>
+        <div class="nav-item active" data-nav="contacts"><i><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></i><span>通讯录</span></div>
+        <div class="nav-item" data-nav="discover"><i><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/><path d="M2 12h20"/></svg></i><span>发现</span></div>
+        <div class="nav-item" data-nav="me"><i><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></i><span>我</span></div>
+    </div>
+</div>
+<div id="contactDetailPage" class="page">
+    <div style="height:54px;background:var(--secondary-bg);display:flex;align-items:center;padding:0 12px;gap:8px;border-bottom:1px solid var(--border-light);">
+        <div class="back-btn" id="contactDetailBackBtn">‹</div>
+        <span style="font-weight:600;font-size:18px;color:var(--theme);" id="contactDetailTitle">联系人详情</span>
+    </div>
+    <div class="contact-detail" id="contactDetailContent"></div>
+</div>
+<div id="discoverPage" class="page">
+    <div style="height:54px;background:var(--secondary-bg);display:flex;align-items:center;justify-content:space-between;padding:0 12px;border-bottom:1px solid var(--border-light);">
+        <span style="font-weight:600;font-size:18px;color:var(--theme);">发现</span>
+    </div>
+    <div class="discover-scroll" id="discoverListContainer">
+        <div class="chat-item" id="goMomentsBtn"><div class="avatar" style="display:flex;align-items:center;justify-content:center;background:var(--theme-light);"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--theme-dark)" stroke-width="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg></div><div class="info"><div class="name">朋友圈</div></div></div>
+        <div class="chat-item" id="goMailboxBtn"><div class="avatar" style="display:flex;align-items:center;justify-content:center;background:var(--theme-light);"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--theme-dark)" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg></div><div class="info"><div class="name">信箱</div></div></div>
+        <div class="chat-item" id="goMusicBtn"><div class="avatar" style="display:flex;align-items:center;justify-content:center;background:var(--theme-light);"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--theme-dark)" stroke-width="2"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></div><div class="info"><div class="name">一起听</div></div></div>
+        <div class="chat-item" id="goCompanionBtn"><div class="avatar" style="display:flex;align-items:center;justify-content:center;background:var(--theme-light);"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--theme-dark)" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div><div class="info"><div class="name">陪伴系统</div></div></div>
+        <div class="chat-item" id="goBookListsBtn"><div class="avatar" style="display:flex;align-items:center;justify-content:center;background:var(--theme-light);"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--theme-dark)" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg></div><div class="info"><div class="name">书单列表</div></div></div>
+        <div class="chat-item" id="goMovieListsBtn"><div class="avatar" style="display:flex;align-items:center;justify-content:center;background:var(--theme-light);"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--theme-dark)" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"/><line x1="7" y1="2" x2="7" y2="22"/><line x1="17" y1="2" x2="17" y2="22"/><line x1="2" y1="12" x2="22" y2="12"/><line x1="2" y1="7" x2="7" y2="7"/><line x1="2" y1="17" x2="7" y2="17"/><line x1="17" y1="7" x2="22" y2="7"/><line x1="17" y1="17" x2="22" y2="17"/></svg></div><div class="info"><div class="name">电影列表</div></div></div>
+        <div class="chat-item" id="goTarotBtn"><div class="avatar" style="display:flex;align-items:center;justify-content:center;background:var(--theme-light);"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--theme-dark)" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></div><div class="info"><div class="name">塔罗/雷诺曼</div></div></div>
+        <div class="chat-item" id="goMovieTogetherBtn"><div class="avatar" style="display:flex;align-items:center;justify-content:center;background:var(--theme-light);"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--theme-dark)" stroke-width="2"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg></div><div class="info"><div class="name">一起看电影</div></div></div>
+        <div class="chat-item" id="goDatingBtn"><div class="avatar" style="display:flex;align-items:center;justify-content:center;background:var(--theme-light);"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--theme)" stroke-width="2"><polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5"/><line x1="12" y1="22" x2="12" y2="7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg></div><div class="info"><div class="name">约会</div></div></div>
+    </div>
+    <div class="bottom-nav">
+        <div class="nav-item" data-nav="chats"><i><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></i><span>传讯</span></div>
+        <div class="nav-item" data-nav="contacts"><i><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></i><span>通讯录</span></div>
+        <div class="nav-item active" data-nav="discover"><i><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/><path d="M2 12h20"/></svg></i><span>发现</span></div>
+        <div class="nav-item" data-nav="me"><i><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></i><span>我</span></div>
+    </div>
+</div>
+<div id="momentsPage" class="page">
+    <div style="height:54px;background:var(--secondary-bg);display:flex;align-items:center;justify-content:space-between;padding:0 12px;border-bottom:1px solid var(--border-light);"><div class="back-btn" id="momentsBackBtn">‹</div><span style="font-weight:600;font-size:18px;color:var(--theme);" id="momentsTitle">朋友圈</span><span id="momentsPublishBtn" style="cursor:pointer;color:var(--theme);display:flex;align-items:center;"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></span></div>
+    <div id="momentsListContainer" style="flex:1;overflow-y:auto;background-size:cover;background-position:center;position:relative;"></div>
+</div>
+<div id="mailboxPage" class="page">
+    <div style="height:54px;background:var(--secondary-bg);display:flex;align-items:center;justify-content:space-between;padding:0 12px;border-bottom:1px solid var(--border-light);"><div class="back-btn" id="mailboxBackBtn">‹</div><span style="font-weight:600;font-size:18px;color:var(--theme);">信箱</span><span style="width:36px;"></span></div>
+    <div style="flex:1;background:var(--secondary-bg);" id="mailboxListContainer"></div>
+</div>
+<div id="letterPage" class="page">
+    <div style="height:54px;background:var(--secondary-bg);display:flex;align-items:center;padding:0 12px;gap:8px;border-bottom:1px solid var(--border-light);"><div class="back-btn" id="letterBackBtn">‹</div><span style="font-weight:600;font-size:18px;color:var(--theme);" id="letterPageTitle">写信</span></div>
+    <div style="flex:1;overflow-y:auto;padding:16px;background:var(--secondary-bg);display:flex;gap:10px;flex-direction:column;font-size:13px !important;" id="letterContentArea"></div>
+</div>
+<div id="mePage" class="page">
+    <div style="height:54px;background:var(--secondary-bg);display:flex;align-items:center;justify-content:space-between;padding:0 12px;border-bottom:1px solid var(--border-light);">
+        <span style="font-weight:600;font-size:18px;color:var(--theme);">我</span>
+    </div>
+    <div style="flex:1;overflow-y:auto;background:var(--secondary-bg);" id="mePageContent"></div>
+    <div class="bottom-nav">
+        <div class="nav-item" data-nav="chats"><i><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></i><span>传讯</span></div>
+        <div class="nav-item" data-nav="contacts"><i><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></i><span>通讯录</span></div>
+        <div class="nav-item" data-nav="discover"><i><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/><path d="M2 12h20"/></svg></i><span>发现</span></div>
+        <div class="nav-item active" data-nav="me"><i><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></i><span>我</span></div>
+    </div>
+</div>
+<div id="pokePage" class="page"><div class="full-page-header"><div class="back-btn" id="pokeBackBtn">‹</div><span style="font-weight:600;font-size:18px;color:var(--theme);">拍一拍</span><span style="width:36px;"></span></div><div class="full-page-body" id="pokePageContent"></div></div>
+<div id="emojiManagerPage" class="page"><div class="full-page-header"><div class="back-btn" id="emojiManagerBackBtn">‹</div><span style="font-weight:600;font-size:18px;color:var(--theme);">表情管理</span><span style="width:36px;"></span></div><div class="full-page-body" id="emojiManagerPageContent"></div></div>
+<div id="blockedPage" class="page"><div class="full-page-header"><div class="back-btn" id="blockedBackBtn">‹</div><span style="font-weight:600;font-size:18px;color:var(--theme);">屏蔽词管理</span><span style="width:36px;"></span></div><div class="full-page-body" id="blockedPageContent"></div></div>
+<div id="globalCardsPage" class="page"><div class="full-page-header"><div class="back-btn" id="globalCardsBackBtn">‹</div><span style="font-weight:600;font-size:18px;color:var(--theme);">全局字卡</span><span style="width:36px;"></span></div><div class="full-page-body" id="globalCardsPageContent"></div></div>
+<div id="userCardsPage" class="page"><div class="full-page-header"><div class="back-btn" id="userCardsBackBtn">‹</div><span style="font-weight:600;font-size:18px;color:var(--theme);">个人字卡</span><span style="width:36px;"></span></div><div class="full-page-body" id="userCardsPageContent"></div></div>
+<div id="myBgPage" class="page"><div class="full-page-header"><div class="back-btn" id="myBgBackBtn">‹</div><span style="font-weight:600;font-size:18px;color:var(--theme);">我的背景库</span><span style="width:36px;"></span></div><div class="full-page-body" id="myBgPageContent"></div></div>
+<div id="contactBgPage" class="page"><div class="full-page-header"><div class="back-btn" id="contactBgBackBtn">‹</div><span style="font-weight:600;font-size:18px;color:var(--theme);">背景图库</span><span style="width:36px;"></span></div><div class="full-page-body" id="contactBgPageContent"></div></div>
+<div id="searchPage" class="page"><div class="full-page-header"><div class="back-btn" id="searchBackBtn">‹</div><span style="font-weight:600;font-size:18px;color:var(--theme);">搜索聊天内容</span><span style="width:36px;"></span></div><div class="full-page-body" id="searchPageContent"></div></div>
+<div id="dateSearchPage" class="page"><div class="full-page-header"><div class="back-btn" id="dateSearchBackBtn">‹</div><span style="font-weight:600;font-size:18px;color:var(--theme);">按日期查找</span><span style="width:36px;"></span></div><div class="full-page-body" id="dateSearchPageContent"></div></div>
+<div id="imageSearchPage" class="page"><div class="full-page-header"><div class="back-btn" id="imageSearchBackBtn">‹</div><span style="font-weight:600;font-size:18px;color:var(--theme);">按图片查找</span><span style="width:36px;"></span></div><div class="full-page-body" id="imageSearchPageContent"></div></div>
+<div id="voiceSearchPage" class="page"><div class="full-page-header"><div class="back-btn" id="voiceSearchBackBtn">‹</div><span style="font-weight:600;font-size:18px;color:var(--theme);">按语音查找</span><span style="width:36px;"></span></div><div class="full-page-body" id="voiceSearchPageContent"></div></div>
+<div id="musicSearchPage" class="page"><div class="full-page-header"><div class="back-btn" id="musicSearchBackBtn">‹</div><span style="font-weight:600;font-size:18px;color:var(--theme);">按音乐查找</span><span style="width:36px;"></span></div><div class="full-page-body" id="musicSearchPageContent"></div></div>
+<div id="bookSearchPage" class="page"><div class="full-page-header"><div class="back-btn" id="bookSearchBackBtn">‹</div><span style="font-weight:600;font-size:18px;color:var(--theme);">按书籍查找</span><span style="width:36px;"></span></div><div class="full-page-body" id="bookSearchPageContent"></div></div>
+<div id="movieSearchPage" class="page"><div class="full-page-header"><div class="back-btn" id="movieSearchBackBtn">‹</div><span style="font-weight:600;font-size:18px;color:var(--theme);">按电影查找</span><span style="width:36px;"></span></div><div class="full-page-body" id="movieSearchPageContent"></div></div>
+<div id="musicPage" class="page"><div class="full-page-header"><div class="back-btn" id="musicBackBtn">‹</div><span style="font-weight:600;font-size:18px;color:var(--theme);">一起听</span><span style="width:36px;"></span></div><div class="full-page-body" id="musicPageContent"></div></div>
+<div id="companionPage" class="page"><div class="full-page-header"><div class="back-btn" id="companionBackBtn">‹</div><span style="font-weight:600;font-size:18px;color:var(--theme);" id="companionTitle">陪伴系统</span><span style="width:36px;"></span></div><div class="full-page-body" id="companionPageContent"></div></div>
+<div id="bookListPage" class="page"><div class="full-page-header"><div class="back-btn" id="bookListBackBtn">‹</div><span style="font-weight:600;font-size:18px;color:var(--theme);" id="bookListTitle">书单列表</span><span style="width:36px;"></span></div><div class="full-page-body" id="bookListPageContent"></div></div>
+<div id="movieListPage" class="page"><div class="full-page-header"><div class="back-btn" id="movieListBackBtn">‹</div><span style="font-weight:600;font-size:18px;color:var(--theme);" id="movieListTitle">电影列表</span><span style="width:36px;"></span></div><div class="full-page-body" id="movieListPageContent"></div></div>
+<div id="tarotPage" class="page"><div class="full-page-header"><div class="back-btn" id="tarotBackBtn">‹</div><span style="font-weight:600;font-size:18px;color:var(--theme);">塔罗/雷诺曼</span><span style="width:36px;"></span></div><div class="full-page-body" id="tarotPageContent"></div></div>
+<div id="movieTogetherPage" class="page"><div class="full-page-header"><div class="back-btn" id="movieTogetherBackBtn">‹</div><span style="font-weight:600;font-size:18px;color:var(--theme);">一起看电影</span><span style="width:36px;"></span></div><div class="full-page-body" id="movieTogetherPageContent"></div></div>
+<div id="datingPage" class="page">
+  <div class="full-page-header">
+    <div class="back-btn" id="datingBackBtn">‹</div>
+    <span style="font-weight:600;font-size:18px;color:var(--theme);">约会</span>
+    <span style="width:36px;"></span>
+  </div>
+  <div class="full-page-body" id="datingPageContent"></div>
+</div>
+<div id="gomokuPage" class="page">
+  <div class="full-page-header">
+    <div class="back-btn" id="gomokuBackBtn">‹</div>
+    <span style="font-weight:600;font-size:18px;color:var(--theme);">五子棋</span>
+    <span style="width:36px;"></span>
+  </div>
+  <div class="full-page-body" id="gomokuPageContent" style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:16px;"></div>
+</div>
+<div id="goPage" class="page">
+  <div class="full-page-header">
+    <div class="back-btn" id="goBackBtn">‹</div>
+    <span style="font-weight:600;font-size:18px;color:var(--theme);">围棋</span>
+    <span style="width:36px;"></span>
+  </div>
+  <div class="full-page-body" id="goPageContent" style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:16px;"></div>
+</div>
+<div id="companionActivePage" class="page">
+  <div class="full-page-header">
+    <div class="back-btn" id="companionActiveBackBtn">‹</div>
+    <span style="font-weight:600;font-size:18px;color:var(--theme);" id="companionActiveTitle">陪伴中</span>
+    <span style="width:36px;"></span>
+  </div>
+  <div class="full-page-body" id="companionActiveContent" style="background-size:cover;background-position:center;position:relative;"></div>
+</div>
+<div id="colorSavePage" class="page">
+  <div class="full-page-header">
+    <div class="back-btn" id="colorSaveBackBtn">‹</div>
+    <span style="font-weight:600;font-size:18px;color:var(--theme);">取色保存</span>
+    <span style="width:36px;"></span>
+  </div>
+  <div class="full-page-body" id="colorSavePageContent"></div>
+</div>
+<div id="themePage" class="page">
+  <div class="full-page-header">
+    <div class="back-btn" id="themeBackBtn">‹</div>
+    <span style="font-weight:600;font-size:18px;color:var(--accent);">主题设置</span>
+    <span style="width:36px;"></span>
+  </div>
+  <div class="full-page-body" id="themePageContent"></div>
+</div>
+<div id="navBgPage" class="page">
+  <div class="full-page-header">
+    <div class="back-btn" id="navBgBackBtn">‹</div>
+    <span style="font-weight:600;font-size:18px;color:var(--theme);">页面背景</span>
+    <span style="width:36px;"></span>
+  </div>
+  <div class="full-page-body" id="navBgPageContent"></div>
+</div>
+<div id="voiceManagerPage" class="page">
+  <div class="full-page-header">
+    <div class="back-btn" id="voiceManagerBackBtn">‹</div>
+    <span style="font-weight:600;font-size:18px;color:var(--theme);" id="voiceManagerTitle">语音库</span>
+    <span style="width:36px;"></span>
+  </div>
+  <div class="full-page-body" id="voiceManagerPageContent"></div>
+</div>
+
+<input type="file" id="fileAvatar" accept="image/*" style="display:none"><input type="file" id="fileBg" accept="image/*" style="display:none">
+<input type="file" id="emojiFile" accept="image/*" multiple style="display:none"><input type="file" id="imageLibFile" accept="image/*" multiple style="display:none">
+<input type="file" id="globalEmojiFile" accept="image/*" multiple style="display:none"><input type="file" id="globalBatchFileInput" accept=".txt,.json" style="display:none">
+<input type="file" id="userBatchFileInput" accept=".txt,.json" style="display:none"><input type="file" id="restoreFileInput" accept=".json" style="display:none">
+<input type="file" id="restoreCardsInput" accept=".json" style="display:none"><input type="file" id="restoreEmojisInput" accept=".json" style="display:none">
+<input type="file" id="restoreChatInput" accept=".json" style="display:none"><input type="file" id="contactRestoreInput" accept=".json" style="display:none">
+<input type="file" id="musicFileInput" accept=".json,.txt" style="display:none">
+<input type="file" id="bookFileInput" accept=".json,.txt" style="display:none">
+<input type="file" id="movieFileInput" accept=".json,.txt" style="display:none">
+<div id="globalMask" class="mask"></div><div id="toast" class="toast"></div><div id="contextMenu" class="context-menu"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="js/chat.js"></script>
+<script src="js/companion.js"></script>
+<script src="js/core.js"></script>
+<script src="js/go.js"></script>
+<script src="js/gomoku.js"></script>
+<script src="js/library.js"></script>
+<script src="js/modules.js"></script>
+<script src="js/theme.js"></script>
+<script src="js/ui.js"></script>
+<script>
+  (async function() {
+    await load();
+    const savedTheme = localStorage.getItem('Mo_theme_backup');
+    if (savedTheme) {
+      appData.themeColor = savedTheme;
+    }
+    applyTheme(appData.themeColor || '#c5a47e');
+    applyTransparency();
+    renderChatList();
+    renderContactList();
+    bindEvents();
+    setActiveNav('chats');
+    setTimeout(() => {
+      simulateUserMoments();
+      simulateUserMomentComments();
+      simulateUserOwnComments();
+      simulateUserMomentLikes();
+      startAutoBackup();
+      startSaveReminder();
+      updateMusicFloatUI();
+      initNavBgs();
+      if (backupFloatBall) backupFloatBall.style.display = 'none';
+      if (backupFloatPanel) backupFloatPanel.style.display = 'none';
+      const activeTask = appData.companionTasks.find(t => t.status === 'active');
+      if (activeTask) {
+        currentCompanionTaskId = activeTask.id;
+        if (activeTask.type === 'movie') startMovieTogetherTimers(activeTask);
+        else startCompanionTimers(activeTask);
+      }
+      document.body.addEventListener('click', (e) => {
+        const badge = e.target.closest('.unread-badge');
+        if (badge) {
+          const chatId = badge.dataset.unread;
+          if (chatId && currentChatId !== chatId) {
+            currentChatId = chatId;
+            openChat();
+          }
+        }
+      });
+    }, 100);
+  })();
+</script>
+</body>
+</html>
